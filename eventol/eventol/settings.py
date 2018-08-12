@@ -472,3 +472,8 @@ class Pyar(Staging):
     ALLOWED_HOSTS = ["*"]
     LOGGING = {}
     ELASTICSEARCH_DSL = {}
+
+
+class PyarProd(Pyar):
+    """Config for eventos.python.org.ar"""
+    DEBUG = False

@@ -44,7 +44,11 @@
                     <span class="icon-bar"></span>
                 </button>
                 <a class="pull-left" href="/">
+                  {% if EVENTOL_SETTINGS.logo_header %}
+                    <img class="img-responsive eventol-logo" src="{{ EVENTOL_SETTINGS.logo_header.url }}" alt="EventoL Logo">
+                  {% else %}
                     <img class="img-responsive eventol-logo" src="{% static "manager/img/eventol-white.png" %}" alt="EventoL Logo">
+                  {% endif %}
                 </a>
             </div>
             <div id="navbar" class="collapse navbar-collapse">
@@ -89,6 +93,11 @@
                               {% trans "Submit your talk" %}
                             </a>
                           </li>
+                        {% endif %}
+                        {% if user.is_authenticated and user|is_speaker:event_slug %}
+                            <li>
+                                <a href="{% url "my_proposals" event_slug %}">{% trans "My Proposals" %}</a>
+                            </li>
                         {% endif %}
                         {% if user.is_authenticated and user|is_registered:event_slug %}
                             <li>

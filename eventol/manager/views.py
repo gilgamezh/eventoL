@@ -52,7 +52,7 @@ from manager.models import (Activity, Attendee, AttendeeAttendanceDate,
 from manager.security import (are_activities_public, add_attendance_permission,
                               add_organizer_permissions, is_collaborator,
                               is_collaborator_or_installer, is_installer,
-                              is_organizer, user_passes_test)
+                              is_organizer, user_passes_test, is_speaker)
 from manager.utils.report import count_by
 
 from .utils import email as utils_email
@@ -1410,6 +1410,49 @@ def activity_proposal(request, event_slug):
     )
 
 
+@login_required
+@user_passes_test(is_speaker, 'index')
+def edit_activity_proposal(request, event_slug, activity_id):
+    event = get_object_or_404(Event, event_slug=event_slug)
+
+    if not event.schedule_confirmed:
+        messages.error(request,
+                       _(
+                           "The activity proposal edition is already closed or the event \
+                           is not accepting proposals through this page. Please \
+                           contact the Event Organization Team to submit it."))
+        return redirect(reverse('index', args=[event_slug]))
+
+    event_user = get_object_or_404(EventUser, user=request.user, event=event)
+    activity = get_object_or_404(Activity, event=event, owner=event_user, pk=activity_id)
+    activity_form = ActivityProposalForm(
+        request.POST or None, request.FILES or None, instance=activity)
+
+    if request.POST:
+        if activity_form.is_valid():
+            try:
+                activity = activity_form.save()
+                return redirect(
+                    reverse(
+                        'image_cropping',
+                        args=[event_slug, activity.pk]
+                    )
+                )
+            except Exception as error_message:
+                logger.error(error_message)
+        messages.error(request, _("There was a problem submitting the proposal. \
+                                  Please check the form for errors."))
+    return render(
+        request,
+        'activities/proposal.html',
+        update_event_info(
+            event_slug,
+            {'form': activity_form, 'errors': [], 'multipart': True},
+            event=event
+        )
+    )
+
+
 def image_cropping(request, event_slug, activity_id):
     activity = get_object_or_404(Activity, pk=activity_id)
     form = ImageCroppingForm(request.POST or None, request.FILES, instance=activity)
@@ -1521,6 +1564,33 @@ def activities(request, event_slug):
         setattr(activity, 'errors', [])
     return render(
         request, 'activities/activities_home.html',
+        update_event_info(
+            event_slug,
+            {
+                'proposed_activities': proposed_activities,
+                'accepted_activities': accepted_activities,
+                'rejected_activities': rejected_activities
+            }
+        )
+    )
+
+
+@login_required
+@user_passes_test(is_speaker, 'index')
+def my_proposals(request, event_slug):
+    event = get_object_or_404(Event, event_slug=event_slug)
+    proposed_activities, accepted_activities, rejected_activities = [], [], []
+    activities_instances = Activity.objects.filter(event=event, owner__user=request.user)
+    for activity in list(activities_instances):
+        activity.labels = activity.labels.split(',')
+        if activity.status == '1':
+            proposed_activities.append(activity)
+        elif activity.status == '2':
+            accepted_activities.append(activity)
+        else:
+            rejected_activities.append(activity)
+    return render(
+        request, 'activities/my_proposals.html',
         update_event_info(
             event_slug,
             {

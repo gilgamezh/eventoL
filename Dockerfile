@@ -27,17 +27,17 @@ RUN npm install -g yarn webpack@^1.12.13 bower less
 RUN pip3 install --no-cache-dir cffi cairocffi psycopg2
 RUN apk --update add --no-cache cairo-dev \
   && rm -rf /var/cache/apk/* /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Create user
-RUN adduser -D -h ${APP_ROOT} \
-    -s /bin/bash \
-    -u ${APP_USER_UID} \
-    ${APP_USER_NAME}
-
+#
+## Create user
+#RUN adduser -D -h ${APP_ROOT} \
+#    -s /bin/bash \
+#    -u ${APP_USER_UID} \
+#    ${APP_USER_NAME}
+#
 # Create folders for deploy
 RUN mkdir -p ${APP_ROOT}
-RUN mkdir -p /var/log/eventol
-RUN chown ${APP_USER_NAME}:root /var/log/eventol
+#RUN mkdir -p /var/log/eventol
+# RUN chown ${APP_USER_NAME}:root /var/log/eventol
 WORKDIR ${APP_ROOT}
 
 # Install python requirements
@@ -85,16 +85,17 @@ RUN cd ${APP_ROOT}/eventol && python manage.py collectstatic --noinput
 RUN mkdir -p ${APP_ROOT}/eventol/media
 
 # Clean and chown files
-RUN rm -rf ${APP_ROOT}/eventol/front \
-  && mkdir -p ${APP_ROOT}/eventol/front
-RUN chmod 0755 ${APP_ROOT}
-RUN chown --changes --recursive ${APP_USER_NAME}:${APP_USER_NAME} ${APP_ROOT}/
+# RUN rm -rf ${APP_ROOT}/eventol/front \
+#   && mkdir -p ${APP_ROOT}/eventol/front
+# RUN chmod 0755 ${APP_ROOT}
+# RUN chown --changes --recursive ${APP_USER_NAME}:${APP_USER_NAME} ${APP_ROOT}/
+RUN apk add --upgrade --no-cache rsync
 
 # Drop privs
-USER ${APP_USER_NAME}
+# USER ${APP_USER_NAME}
 
 # Create log file
-RUN touch /var/log/eventol/eventol.log
+# RUN touch /var/log/eventol/eventol.log
 
 # Compile .po files
 RUN sed -i 's@#~ @@g' ${APP_ROOT}/eventol/conf/locale/*/LC_MESSAGES/djangojs.po
@@ -102,7 +103,7 @@ RUN cd ${APP_ROOT}/eventol && python manage.py compilemessages
 
 EXPOSE 8000
 
-VOLUME ${APP_ROOT}/eventol/media
-VOLUME ${APP_ROOT}/eventol/static
+#VOLUME ${APP_ROOT}/eventol/media
+#VOLUME ${APP_ROOT}/eventol/static
 
 CMD ["tail", "-f", "/dev/null"]

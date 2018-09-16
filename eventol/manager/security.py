@@ -6,8 +6,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import available_attrs
-from manager.models import Attendee, Collaborator, Installer, Organizer, Activity
+from manager.models import Attendee, Collaborator, Installer, Organizer, Activity, Reviewer
 
 
 def get_or_create_attendance_permission():
@@ -48,14 +49,6 @@ def add_attendance_permission(user):
     user.user_permissions.add(change_attendee_permission)
     attendance_permission = get_or_create_attendance_permission()
     user.user_permissions.add(attendance_permission)
-
-
-def add_review_permission(user):
-    """Add permissions needed to access and vote activities"""
-    permissions = ['add_vote', 'change_vote', 'delete_vote', 'can_review_activity']
-    for permission_name in permissions:
-        permission = Permission.objects.get(codename=permission_name)
-        user.user_permissions.add(permission)
 
 
 def create_organizers_group():
@@ -135,13 +128,21 @@ def is_collaborator(user, event_slug=None):
             event_user__event__event_slug=event_slug).exists() or
         is_organizer(user, event_slug=event_slug))
 
+def is_reviewer(user, event_slug=None):
+    return event_slug and (
+        Reviewer.objects.filter(
+            event_user__user=user,
+            event_user__event__event_slug=event_slug).exists() or
+        is_organizer(user, event_slug=event_slug))
+
+
 
 def is_collaborator_or_installer(user, event_slug=None):
     return is_collaborator(user, event_slug=event_slug) or is_installer(user,
                                                                         event_slug=event_slug)
 
 
-def can_review_activity(user, event_slug=None):
+def are_activities_public(user, event_slug=None):
     """Return True if activities are public.
 
     If activities are private only will return true for collaborator users"""
@@ -149,13 +150,36 @@ def can_review_activity(user, event_slug=None):
         return True
     else:
         if user.is_authenticated():
-            return (
-                is_organizer(user, event_slug=event_slug)
-                or user.has_perm("manager.can_review_activity")
-            )
+            return is_reviewer(user, event_slug=event_slug)
         else:
             raise PermissionDenied(
                 "Only organizers and collaborators are authorized to access the activities list.")
+
+
+def is_activity_public():
+    """Return True if activities are public.
+
+    If activities are private only will return true for collaborator users or activity owner"""
+    def decorator(view_func):
+        @wraps(view_func, assigned=available_attrs(view_func))
+        def _wrapped_view(request, *args, **kwargs):
+            activity_id = kwargs['activity_id']
+            user = request.user
+            activity = get_object_or_404(Activity, pk=activity_id)
+            event_slug = kwargs['event_slug']
+
+            if any([
+                    not settings.PRIVATE_ACTIVITIES,
+                    activity.owner == user,
+                    user.is_authenticated() and is_reviewer(user, event_slug=event_slug)
+            ]):
+                return view_func(request, *args, **kwargs)
+            else:
+                raise PermissionDenied("Only organizers and collaborators are authorized "
+                                       "to access the activities list.")
+        return _wrapped_view
+
+    return decorator
 
 
 def user_passes_test(test_func, name_redirect):

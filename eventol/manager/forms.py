@@ -199,7 +199,7 @@ class AttendeeRegistrationByCollaboratorForm(forms.ModelForm):
     class Meta(object):
         model = Attendee
         fields = ['first_name', 'last_name', 'nickname', 'email',
-                  'additional_info', 'is_installing',
+                  'additional_info',
                   'event', 'registration_date']
         widgets = {'event': forms.HiddenInput(),
                    'registration_date': forms.HiddenInput(),
@@ -263,12 +263,12 @@ class CollaboratorRegistrationForm(ModelForm):
 
 class AttendeeRegistrationFromUserForm(ModelForm):
     field_order = ['first_name', 'last_name', 'nickname', 'additional_info',
-                   'is_installing', 'email', 'event', 'event_user', 'registration_date']
+                   'email', 'event', 'event_user', 'registration_date']
 
     class Meta(object):
         model = Attendee
         fields = ['first_name', 'last_name', 'nickname', 'email',
-                  'additional_info', 'is_installing',
+                  'additional_info',
                   'event', 'registration_date', 'event_user']
         widgets = {'first_name': forms.HiddenInput(),
                    'last_name': forms.HiddenInput(),
@@ -292,13 +292,13 @@ class AttendeeRegistrationForm(ModelForm):
     captcha = CaptchaField()
 
     field_order = ['first_name', 'last_name', 'nickname', 'additional_info',
-                   'is_installing', 'email', 'repeat_email', 'captcha',
+                   'email', 'repeat_email', 'captcha',
                    'event', 'registration_date']
 
     class Meta(object):
         model = Attendee
         fields = ['first_name', 'last_name', 'nickname', 'email',
-                  'additional_info', 'is_installing',
+                  'additional_info',
                   'event', 'registration_date']
         widgets = {'event': forms.HiddenInput(),
                    'additional_info': forms.TextInput(),

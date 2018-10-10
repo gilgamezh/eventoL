@@ -169,7 +169,7 @@ def is_activity_public():
             event_slug = kwargs['event_slug']
 
             if any([
-                    activity.get_status_display() == "Accepted",
+                    activity.status == "2",  # Accepted
                     not settings.PRIVATE_ACTIVITIES,
                     activity.owner.user == user,
                     user.is_authenticated() and is_reviewer(user, event_slug=event_slug)
